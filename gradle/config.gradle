@@ -1,0 +1,9 @@
+ext {
+    isImportLibArouter = false
+    isImportFamily = false
+
+    isImportLibIpc = false
+    isImportLibTools = true
+    isImportLibNetapi = true
+    isImportLibDb = false
+}

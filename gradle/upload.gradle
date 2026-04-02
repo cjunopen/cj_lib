@@ -1,0 +1,21 @@
+apply from: "../main/gradle/build_aar.gradle"
+apply plugin: 'maven'
+
+version = POM_VERSION
+group = POM_GROUP_ID
+
+uploadArchives{
+
+    repositories.mavenDeployer{
+        // 本地仓库路径
+        repository(url:"file:" + project.projectDir +  "//..//maven-repo")
+        // 唯一标识
+        pom.groupId = POM_GROUP_ID
+        // 项目名称
+        pom.artifactId = POM_ARTIFACTID
+        // 版本号
+        pom.version = POM_VERSION
+
+    }
+
+}

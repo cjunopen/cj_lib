@@ -1,0 +1,27 @@
+//将源码打包  为了保证引入的aar  包可以查看源码
+task androidSourcesJar(type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java.srcDirs
+}
+//包含文档和源码的aar
+artifacts {
+    archives androidSourcesJar
+}
+
+//def copyFile(name) {
+//    copy {
+//        from "build/outputs/aar/" + name + "-debug.aar"
+//        into "../lib_aar/"
+//    }
+//    copy {
+//        from "build/libs/" + name + "-sources.jar"
+//        into "../lib_aar/"
+//    }
+//}
+//
+//gradle.projectsEvaluated{
+//    assembleDebug.dependsOn(androidSourcesJar)
+//    assembleDebug.doLast{
+//        copyFile(project.name)
+//    }
+//}
