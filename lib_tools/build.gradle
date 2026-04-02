@@ -51,7 +51,7 @@ dependencies {
     api 'com.uber.autodispose2:autodispose-androidx-lifecycle:2.0.0'
 
     //android工具
-    api 'com.blankj:utilcode:1.30.0'
+    api 'com.blankj:utilcode:1.30.7'
 
     //service生命周期绑定
     api "android.arch.lifecycle:extensions:1.1.1"
