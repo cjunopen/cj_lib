@@ -3,6 +3,26 @@ plugins {
     id 'maven-publish'
 }
 
+android {
+    compileSdkVersion 28
+
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 28
+        versionCode 100
+        versionName "1.0.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
 afterEvaluate {
     publishing {
         publications {
@@ -46,4 +66,7 @@ dependencies {
     api('com.github.zhpanvip:bannerviewpager:3.5.12')
 
     implementation files('libs\\ant.jar')
+
+    api 'org.projectlombok:lombok:1.18.16'
+    annotationProcessor 'org.projectlombok:lombok:1.18.16'
 }
