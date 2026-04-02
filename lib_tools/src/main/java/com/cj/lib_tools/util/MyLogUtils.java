@@ -7,8 +7,7 @@ import com.cj.lib_tools.util.rxjava.RxjavaRetry;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
-import java.util.Comparator;
-import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.rxjava3.annotations.NonNull;
@@ -21,46 +20,52 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import timber.log.Timber;
 
 /**
- * @Description:
+ * @Description: 日志工具（改造版：按 年月日文件夹 + 时分秒文件名 保存）
  * @Author: CJ
- * @CreateDate: 2024/10/30 16:33
  */
 public class MyLogUtils {
 
     private static Disposable sDisposable;
 
-    public static final String getTag(Object o){
+    public static final String getTag(Object o) {
         return o.getClass().getSimpleName();
     }
 
-    private static final String LOG_DIR = "sdcard/log/";
+    // 根日志目录
+    private static final String LOG_ROOT_DIR = "sdcard/log/";
 
     /**
-     * 通过时间获取日志名
-     * @param time
-     * @return
+     * 获取今天的日志文件夹：sdcard/log/2026-04-02/
      */
-    private static File getLogFileByTime(long time){
-        File file;
-        if (time != 0){
-            String date = TimeUtils.millis2String(time, new SimpleDateFormat("yyyy-MM-dd"));
-            file = new File(LOG_DIR + date + ".log");
-            FileUtils.createOrExistsFile(LOG_DIR + date + ".log");
-        }else {
-            List<File> list = FileUtils.listFilesInDir(LOG_DIR, new Comparator<File>() {
-                @Override
-                public int compare(File o1, File o2) {
-                    return o1.getName().compareTo(o2.getName());
-                }
-            });
-            if (list != null && list.size() > 0){
-                file = list.get(0);
-            }else {
-                return getLogFileByTime(System.currentTimeMillis());
-            }
-        }
+    private static String getTodayLogFolder() {
+        String dateFolder = TimeUtils.millis2String(System.currentTimeMillis(),
+                new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()));
+        return LOG_ROOT_DIR + dateFolder + "/";
+    }
 
-        return file;
+    /**
+     * 获取本次日志文件：sdcard/log/2026-04-02/2026-04-02_10-25-30.log
+     */
+    private static File getLogFileByTime(long time) {
+        // 1. 文件夹：年月日
+        String folderPath = getTodayLogFolder();
+
+        // 2. 文件名：年月日_时分秒
+        String fileName;
+        if (time == 0){
+            time = System.currentTimeMillis();
+        }
+        fileName = TimeUtils.millis2String(time,
+                new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())) + ".log";
+
+        // 3. 拼接完整路径
+        File logFile = new File(folderPath, fileName);
+
+        // 4. 自动创建文件夹 + 文件
+        FileUtils.createOrExistsDir(folderPath);
+        FileUtils.createOrExistsFile(logFile);
+
+        return logFile;
     }
 
     /**
@@ -69,30 +74,13 @@ public class MyLogUtils {
     public static void startSaveLog() {
         stopSaveLog();
         MyTimeUtils.getNetTimeByRx()
-                .onErrorReturn(new Function<Throwable, Long>() {
-                    @Override
-                    public Long apply(Throwable throwable) throws Throwable {
-                        return 0l;
-                    }
-                })
-                .map(new Function<Long, File>() {
-                    @Override
-                    public File apply(Long time) throws Throwable {
-                        return getLogFileByTime(time);
-                    }
-                })
-                .flatMap(new Function<File, ObservableSource<String>>() {
-                    @Override
-                    public ObservableSource<String> apply(File file) throws Throwable {
-                        String cmd = "logcat -v threadtime ";
-                        return MyShellUtils.execShellByRx(cmd, true)
-                                .doOnNext(new Consumer<String>() {
-                                    @Override
-                                    public void accept(String s) throws Throwable {
-                                        FileIOUtils.writeFileFromString(file, s + "\n", true);
-                                    }
-                                }).retryWhen(new RxjavaRetry(10, 2, TimeUnit.SECONDS));
-                    }
+                .onErrorReturn(throwable -> 0L)
+                .map(time -> getLogFileByTime(time))
+                .flatMap(file -> {
+                    String cmd = "logcat -v threadtime ";
+                    return MyShellUtils.execShellByRx(cmd, true)
+                            .doOnNext(s -> FileIOUtils.writeFileFromString(file, s + "\n", true))
+                            .retryWhen(new RxjavaRetry(10, 2, TimeUnit.SECONDS));
                 })
                 .observeOn(Schedulers.io())
                 .subscribe(new Observer<String>() {
@@ -102,18 +90,16 @@ public class MyLogUtils {
                     }
 
                     @Override
-                    public void onNext(@NonNull String s) {
-
-                    }
+                    public void onNext(@NonNull String s) {}
 
                     @Override
                     public void onError(@NonNull Throwable e) {
-                        Timber.e("onError: " + e.getMessage());
+                        Timber.e("日志保存失败: " + e.getMessage());
                     }
 
                     @Override
                     public void onComplete() {
-                        Timber.i("onComplete");
+                        Timber.i("日志保存完成");
                     }
                 });
     }
@@ -121,8 +107,8 @@ public class MyLogUtils {
     /**
      * 停止保存日志
      */
-    private static void stopSaveLog(){
-        if (sDisposable != null && !sDisposable.isDisposed()){
+    public static void stopSaveLog() {
+        if (sDisposable != null && !sDisposable.isDisposed()) {
             sDisposable.dispose();
         }
     }
